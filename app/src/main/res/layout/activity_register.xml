@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".RegisterActivity">
+
+    <Switch
+        android:id="@+id/saveLoginToExternalStorageSwitchId"
+        app:layout_constraintVertical_chainStyle="packed"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/save_login_to_external_storage"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:gravity="end"
+        app:layout_constraintBottom_toTopOf="@id/setLoginEdtTxtId"/>
+
+
+    <EditText
+        android:id="@+id/setLoginEdtTxtId"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:hint="@string/login"
+        android:layout_margin="8dp"
+        app:layout_constraintTop_toBottomOf="@id/saveLoginToExternalStorageSwitchId"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/setPasswordEdtTxtId"
+        android:autofillHints="@string/password"
+        android:inputType="text" />
+
+    <EditText
+        android:id="@+id/setPasswordEdtTxtId"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:hint="@string/password"
+        android:layout_margin="8dp"
+        app:layout_constraintTop_toBottomOf="@id/setLoginEdtTxtId"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/confirmPasswordEdtTxtId"
+        android:autofillHints=""
+        android:inputType="textPassword" />
+
+    <EditText
+        android:id="@+id/confirmPasswordEdtTxtId"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:hint="@string/confirm_password"
+        android:layout_margin="8dp"
+        app:layout_constraintTop_toBottomOf="@id/setPasswordEdtTxtId"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/passwordsNotEqualTxtViewId"
+        android:autofillHints=""
+        android:inputType="textPassword" />
+
+    <TextView
+        android:id="@+id/passwordsNotEqualTxtViewId"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/entered_passwords_are_not_equal"
+        android:visibility="gone"
+        tools:visibility="visible"
+        app:layout_constraintTop_toBottomOf="@+id/confirmPasswordEdtTxtId"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_margin="8dp"
+        android:gravity="center"
+        android:textColor="@android:color/holo_red_dark"
+        app:layout_constraintBottom_toBottomOf="@id/registerUserBtnId"/>
+
+    <Button
+        android:id="@+id/registerUserBtnId"
+        android:enabled="false"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/register"
+        android:layout_margin="4dp"
+        android:background="@android:drawable/btn_default"
+        android:backgroundTint="@color/colorPrimary"
+        app:layout_constraintTop_toBottomOf="@id/passwordsNotEqualTxtViewId"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/cancelBtnId"/>
+
+    <Button
+        android:id="@+id/cancelBtnId"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/cancel"
+        android:layout_margin="4dp"
+        android:background="@android:drawable/btn_default"
+        android:backgroundTint="@color/colorAccent"
+        app:layout_constraintTop_toBottomOf="@id/registerUserBtnId"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
