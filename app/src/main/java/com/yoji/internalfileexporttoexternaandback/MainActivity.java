@@ -2,8 +2,9 @@ package com.yoji.internalfileexporttoexternaandback;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
+import android.os.ParcelFileDescriptor;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
@@ -14,12 +15,16 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import org.apache.commons.io.IOUtils;
+
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -29,6 +34,10 @@ public class MainActivity extends AppCompatActivity {
 
     private SharedPreferences sharedPreferences;
     private boolean readFromExternalStorage;
+    private String path;
+    private Uri loginExtUri;
+    private boolean uriExists;
+    private final int REGISTER = 10;
 
     private TextWatcher textWatcher = new TextWatcher() {
         @Override
@@ -53,27 +62,34 @@ public class MainActivity extends AppCompatActivity {
         public void onClick(View v) {
             String login = loginEdtTxt.getText().toString().trim();
             String password = passwordEdtTxt.getText().toString().trim();
-            enteredLoginAndPasswordCheck(login, password, readFromExternalStorage);
+            if (readFromExternalStorage && uriFileExists(loginExtUri)){
+                enteredLoginAndPasswordCheckExt(login, password);
+            }else{
+                enteredLoginAndPasswordCheckInt(login, password);
+            }
         }
     };
 
     private View.OnClickListener registerBtnOnClickListener = v -> {
         Intent intent = new Intent(MainActivity.this, RegisterActivity.class);
         intent.putExtra(Key.TO_EXTERNAL, readFromExternalStorage);
-        startActivityForResult(intent, RequestCode.TO_EXTERNAL_STORAGE);
+        startActivityForResult(intent, REGISTER);
     };
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        if (requestCode == RequestCode.TO_EXTERNAL_STORAGE && resultCode == RESULT_OK){
-            assert data != null;
-            readFromExternalStorage = data.getBooleanExtra(Key.RESULT, false);
+        if (requestCode == REGISTER && resultCode == RESULT_OK){
+            readFromExternalStorage = Objects.requireNonNull(data).getBooleanExtra(Key.RESULT, false);
+            path = Objects.requireNonNull(data).getStringExtra(Key.URI_PATH);
+            uriExists = !Objects.requireNonNull(path).equals("");
             Toast.makeText(this, R.string.toast_message_user_registered, Toast.LENGTH_SHORT).show();
 
+            loginExtUri = Uri.parse(path);
             SharedPreferences.Editor editor = sharedPreferences.edit();
             editor.putBoolean(Key.TO_EXTERNAL, readFromExternalStorage);
+            editor.putString(Key.URI_PATH, path);
             editor.apply();
         }
     }
@@ -85,6 +101,9 @@ public class MainActivity extends AppCompatActivity {
 
         sharedPreferences = getSharedPreferences("Save Mode", MODE_PRIVATE);
         readFromExternalStorage = sharedPreferences.getBoolean(Key.TO_EXTERNAL, false);
+        path = sharedPreferences.getString(Key.URI_PATH, "");
+        uriExists = !path.equals("");
+        loginExtUri = Uri.parse(path);
         initViews();
     }
 
@@ -100,70 +119,89 @@ public class MainActivity extends AppCompatActivity {
         registerBtn.setOnClickListener(registerBtnOnClickListener);
     }
 
-    private void enteredLoginAndPasswordCheck (String login, String password, boolean external){
-        try {
-            File loginExtFile = new File(this.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), TxtFileName.LOGIN);
-            FileInputStream passwordFis = openFileInput(TxtFileName.PASSWORD);
+    private void enteredLoginAndPasswordCheckInt (String login, String password){
+        try (FileInputStream passwordFis = openFileInput(TxtFileName.PASSWORD);
             InputStreamReader passwordIsr = new InputStreamReader(passwordFis);
+            FileInputStream loginFis = openFileInput(TxtFileName.LOGIN);
+            InputStreamReader loginIsr = new InputStreamReader(loginFis);
             BufferedReader passwordBr = new BufferedReader(passwordIsr);
-            BufferedReader loginBr;
-            if (external && loginExtFile.exists()){
-                loginBr = loginBrExt(loginExtFile);
-            }else {
-                loginBr = loginBrInt();
-            }
+            BufferedReader loginBr = new BufferedReader(loginIsr)){
             String savedLogin;
             String savedPassword;
-            assert loginBr != null;
-            while ((savedLogin = loginBr.readLine()) != null &&
-                    (savedPassword = passwordBr.readLine()) != null){
+            while ((savedLogin = Objects.requireNonNull(loginBr).readLine()) != null &&
+                    (savedPassword = Objects.requireNonNull(passwordBr).readLine()) != null){
                 if (login.equals(savedLogin)){
                     if (password.equals(savedPassword)){
                         Toast.makeText(this, getString(R.string.toast_message_logged_in)
                                 + login, Toast.LENGTH_LONG).show();
-                        passwordEdtTxt.setText("");
-                        loginEdtTxt.setText("");
+                        clearEdtTxtForms();
                     }else {
                         Toast.makeText(this, getString(R.string.toast_message_wrong_password),
                                 Toast.LENGTH_SHORT).show();
                         passwordEdtTxt.setText("");
                     }
-                    loginBr.close();
-                    passwordBr.close();
                     return;
                 }
             }
-            passwordEdtTxt.setText("");
-            loginEdtTxt.setText("");
-            loginBr.close();
-            passwordBr.close();
+            clearEdtTxtForms();
             Toast.makeText(this, getString(R.string.toast_message_user_not_found),
                     Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
             e.printStackTrace();
-            passwordEdtTxt.setText("");
-            loginEdtTxt.setText("");
+            clearEdtTxtForms();
             Toast.makeText(this, R.string.toast_message_user_not_found, Toast.LENGTH_SHORT).show();
         }
     }
 
-    private BufferedReader loginBrInt(){
-        try {
-            FileInputStream loginFis = openFileInput(TxtFileName.LOGIN);
-            InputStreamReader loginIsr = new InputStreamReader(loginFis);
-            return new BufferedReader(loginIsr);
-        } catch (FileNotFoundException e) {
+    private void enteredLoginAndPasswordCheckExt (String login, String password){
+        try (FileInputStream passwordFis = openFileInput(TxtFileName.PASSWORD);
+             InputStreamReader passwordIsr = new InputStreamReader(passwordFis);
+             BufferedReader passwordBr = new BufferedReader(passwordIsr);
+             InputStream loginExtIs = getContentResolver().openInputStream(loginExtUri)){
+            String[] savedLoginExt = IOUtils.toString(Objects.requireNonNull(loginExtIs),
+                    StandardCharsets.UTF_8).split("\n");
+            String savedPassword;
+            for (String savedLogin : savedLoginExt){
+                savedPassword = Objects.requireNonNull(passwordBr).readLine();
+                if (login.equals(savedLogin)){
+                    if (password.equals(savedPassword)){
+                        Toast.makeText(this, getString(R.string.toast_message_logged_in)
+                                + login, Toast.LENGTH_LONG).show();
+                        clearEdtTxtForms();
+                    }else {
+                        Toast.makeText(this, getString(R.string.toast_message_wrong_password),
+                                Toast.LENGTH_SHORT).show();
+                        passwordEdtTxt.setText("");
+                    }
+                    return;
+                }
+            }
+            clearEdtTxtForms();
+            Toast.makeText(this, getString(R.string.toast_message_user_not_found),
+                    Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
             e.printStackTrace();
+            clearEdtTxtForms();
+            Toast.makeText(this, R.string.toast_message_user_not_found, Toast.LENGTH_SHORT).show();
         }
-        return null;
     }
 
-    private BufferedReader loginBrExt(File loginExtFile){
-        try {
-            return new BufferedReader(new FileReader(loginExtFile));
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
-        return null;
+    private void clearEdtTxtForms(){
+        passwordEdtTxt.setText("");
+        loginEdtTxt.setText("");
+    }
+
+    private boolean uriFileExists(Uri uri) {
+        if (uriExists) {
+            try (ParcelFileDescriptor pfd = getContentResolver().
+                    openFileDescriptor(uri, "wa");
+                 FileOutputStream ignored = new FileOutputStream
+                         (Objects.requireNonNull(pfd).getFileDescriptor())) {
+                return true;
+            } catch (IOException e) {
+                e.printStackTrace();
+                return false;
+            }
+        }else return false;
     }
 }
