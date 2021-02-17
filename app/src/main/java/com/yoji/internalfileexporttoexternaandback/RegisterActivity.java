@@ -49,7 +49,7 @@ public class RegisterActivity extends AppCompatActivity {
     private final int CREATE_EXTERNAL_TXT_FILE = 11;
 
 
-    private TextWatcher textWatcher = new TextWatcher() {
+    private final TextWatcher textWatcher = new TextWatcher() {
         @Override
         public void beforeTextChanged(CharSequence s, int start, int count, int after) {
         }
@@ -69,7 +69,7 @@ public class RegisterActivity extends AppCompatActivity {
         }
     };
 
-    private View.OnClickListener registerBtnOnClickListener = new View.OnClickListener() {
+    private final View.OnClickListener registerBtnOnClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
             loginToSave = loginEdtTxt.getText().toString().trim();
@@ -78,12 +78,12 @@ public class RegisterActivity extends AppCompatActivity {
         }
     };
 
-    private View.OnClickListener cancelBtnOnClickListener = v -> {
+    private final View.OnClickListener cancelBtnOnClickListener = v -> {
         setResult(RESULT_CANCELED);
         finish();
     };
 
-    private CompoundButton.OnCheckedChangeListener toExternalStorageOnCheckedChangeListener =
+    private final CompoundButton.OnCheckedChangeListener toExternalStorageOnCheckedChangeListener =
             new CompoundButton.OnCheckedChangeListener() {
                 @Override
                 public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
